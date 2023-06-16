@@ -1,0 +1,9 @@
+
+*~
+
+cache/
+data/
+old/
+
+# Jupyter Notebook
+.ipynb_checkpoints
