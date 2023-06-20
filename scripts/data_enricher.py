@@ -91,7 +91,6 @@ def add_direction_columns(gdf):
         for ew in EW:
             dir_name = f"{ns}{ew}"
             if dir_name != "":
-                print(dir_name)
                 gdf[dir_name] = gdf.apply (lambda row: has_neighbour(row, EW[ew], NS[ns], gdf), axis=1)
     gdf["hasGeo"] = gdf.apply (lambda row: type(row['geojson']) != float, axis=1)
     gdf["neighbourCount"] = gdf.apply (lambda row: neighbour_count(row), axis=1)
