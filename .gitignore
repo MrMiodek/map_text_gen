@@ -5,5 +5,8 @@ cache/
 data/
 old/
 
+__pycache__
+checkpoints/
+
 # Jupyter Notebook
 .ipynb_checkpoints
