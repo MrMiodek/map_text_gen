@@ -37,6 +37,8 @@ def transform_coordinates(point, x, y, z, extent):
 
 
 def geojson_to_vt(geo, x, y, z, extent):
+    if type(geo) == float:
+        return None
     geo2 = geojson.loads(json.dumps(geo))
     geo3 = geojson.utils.map_tuples(lambda c: 
         transform_coordinates(c, x,y,z,extent), geo2)
@@ -44,6 +46,8 @@ def geojson_to_vt(geo, x, y, z, extent):
 
 
 def geojson_to_wkt(geo):
+    if geo is None:
+        return None
     full_wkt = ""
     for feature in geo['features']:
         full_wkt+=feature['properties']['highway']
@@ -53,6 +57,8 @@ def geojson_to_wkt(geo):
 
 
 def move_geojson_vt(geo, dx, dy, extent):
+    if geo is None:
+        return None
     geo2 = geojson.loads(json.dumps(geo))
     geo3 = geojson.utils.map_tuples(lambda c: 
         (c[0]+dx*extent, c[1]+dy*extent), geo2)
@@ -75,8 +81,10 @@ def add_more_formats(city_name, results_dir):
     city_dir = path.join(results_dir, city_name)
     print("Reading geojson")
     gdf = gpd.read_file(path.join(city_dir, "rich_gdf.geojson"))
+    print("Adding formats")
     gdf = add_geojson_vt(gdf)
     gdf = add_wkt(gdf)
+    print("Saving results")
     with open(path.join(city_dir, "multiformat_gdf.geojson"), "w") as multiformat_gdf:
         multiformat_gdf.write(gdf.to_json())
     return gdf
