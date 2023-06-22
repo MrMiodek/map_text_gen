@@ -97,12 +97,9 @@ def add_direction_columns(gdf):
     return gdf
 
 
-def enrich_data(city_name, results_dir):
+def enrich_data(gdf, city_name, results_dir):
     print(f"Enriching {city_name} data")
     city_dir = path.join(results_dir, city_name)
-    print("Reading geojson")
-    gdf = gpd.read_file(path.join(city_dir, f"{city_name}2.geojson"))
-    gdf = gdf.set_index('id')
     print("Adding direction data")
     gdf = add_direction_columns(gdf)
     print("Saving enriched geojson")
@@ -111,12 +108,9 @@ def enrich_data(city_name, results_dir):
     return gdf
 
 
-def tag_geometry_data_enrichment(city_name, results_dir):
+def tag_geometry_data_enrichment(gdf, city_name, results_dir):
     print(f"Fully enriching {city_name} data")
     city_dir = path.join(results_dir, city_name)
-    print("Reading geojson")
-    gdf = gpd.read_file(path.join(city_dir, f"{city_name}2.geojson"))
-    gdf = gdf.set_index('id')
     print("Calculating stats")
     tag_stats = get_tag_stats(gdf)
     geo_stats = get_geo_stats(tag_stats)
