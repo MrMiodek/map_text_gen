@@ -1,10 +1,14 @@
 import math
 import json
+from os import path
 import geojson
 import shapely
+import geopandas as gpd
+
 
 def projectX(x):
     return x / 360 + 0.5
+
 
 def projectY(y):
     sin = math.sin(y * math.pi / 180)
@@ -48,8 +52,31 @@ def geojson_to_wkt(geo):
     return full_wkt
 
 
-def move_geojsonvt(geo, dx, dy, extent):
+def move_geojson_vt(geo, dx, dy, extent):
     geo2 = geojson.loads(json.dumps(geo))
     geo3 = geojson.utils.map_tuples(lambda c: 
         (c[0]+dx*extent, c[1]+dy*extent), geo2)
     return geo3
+
+
+def add_geojson_vt(gdf, extent=4096):
+    gdf["geojson_vt"] = gdf.apply (lambda row: \
+        geojson_to_vt(row['geojson'], row['x'], row['y'], row['z'], extent), axis=1)
+    return gdf
+
+def add_wkt(gdf):
+    gdf["wkt"] = gdf.apply (lambda row: \
+        geojson_to_wkt(row['geojson_vt']), axis=1)
+    return gdf
+
+
+def add_more_formats(city_name, results_dir):
+    print(f"Adding more data formats for {city_name}")
+    city_dir = path.join(results_dir, city_name)
+    print("Reading geojson")
+    gdf = gpd.read_file(path.join(city_dir, "rich_gdf.geojson"))
+    gdf = add_geojson_vt(gdf)
+    gdf = add_wkt(gdf)
+    with open(path.join(city_dir, "multiformat_gdf.geojson"), "w") as multiformat_gdf:
+        multiformat_gdf.write(gdf.to_json())
+    return gdf
