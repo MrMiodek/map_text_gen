@@ -100,7 +100,21 @@ def add_direction_columns(gdf):
 def enrich_data(city_name, results_dir):
     print(f"Enriching {city_name} data")
     city_dir = path.join(results_dir, city_name)
-    print(f"Reading geojson")
+    print("Reading geojson")
+    gdf = gpd.read_file(path.join(city_dir, f"{city_name}2.geojson"))
+    gdf = gdf.set_index('id')
+    print("Adding direction data")
+    gdf = add_direction_columns(gdf)
+    print("Saving enriched geojson")
+    with open(path.join(city_dir, "rich_gdf.geojson"), "w") as full_gdf:
+        full_gdf.write(gdf.to_json())
+    return gdf
+
+
+def tag_geometry_data_enrichment(city_name, results_dir):
+    print(f"Fully enriching {city_name} data")
+    city_dir = path.join(results_dir, city_name)
+    print("Reading geojson")
     gdf = gpd.read_file(path.join(city_dir, f"{city_name}2.geojson"))
     gdf = gdf.set_index('id')
     print("Calculating stats")
@@ -112,7 +126,7 @@ def enrich_data(city_name, results_dir):
         json.dump(geo_stats, geo_file)
     print("Adding direction data")
     gdf = add_direction_columns(gdf)
-    print("Saving enriched geojson")
-    with open(path.join(city_dir, "full_gdf.json"), "w") as full_gdf:
+    print("Saving full geojson")
+    with open(path.join(city_dir, "tag_geometry.geojson"), "w") as full_gdf:
         full_gdf.write(gdf.to_json())
     return gdf
