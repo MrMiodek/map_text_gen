@@ -4,7 +4,6 @@ from os import path
 import copy
 import geojson
 import shapely
-import geopandas as gpd
 
 
 def projectX(x):
@@ -38,7 +37,7 @@ def transform_coordinates(point, x, y, z, extent):
 
 
 def geojson_to_vt(geo, x, y, z, extent):
-    if type(geo) == float or geo is None:
+    if isinstance(geo, float) or geo is None:
         return None
     geo2 = geojson.loads(json.dumps(geo))
     geo3 = geojson.utils.map_tuples(lambda c: 
@@ -46,19 +45,20 @@ def geojson_to_vt(geo, x, y, z, extent):
     return geo3
 
 
-def geojson_to_wkt(geo):
-    if type(geo) == float or geo is None:
+def geojson_to_wkt(geo, osm_filter):
+    if isinstance(geo, float)  or geo is None:
         return None
     full_wkt = ""
     for feature in geo['features']:
-        full_wkt+=feature['properties']['highway']
+        for osm_key in osm_filter:
+            full_wkt+=str(feature['properties'].get(osm_key, None))+" "
         wkt = shapely.from_geojson(geojson.dumps(feature['geometry']))
-        full_wkt+=f" {str(wkt)}\n"
+        full_wkt+=f"{str(wkt)}\n"
     return full_wkt
 
 
 def move_geojson_vt(geo, dx, dy, extent):
-    if type(geo) == float or geo is None:
+    if isinstance(geo, float) or geo is None:
         return None
     geo2 = geojson.loads(json.dumps(geo))
     geo3 = geojson.utils.map_tuples(lambda c: 
@@ -66,17 +66,14 @@ def move_geojson_vt(geo, dx, dy, extent):
     return geo3
 
 
-#row['geojson']
-def add_geojson_vt(gdf, input, extent=4096):
+def add_geojson_vt(gdf, source_column, extent=4096):
     return gdf.apply (lambda row: \
-        geojson_to_vt(row[input], row['x'], row['y'], row['z'], extent), axis=1)
-    #gdf["geojson_vt"] 
+        geojson_to_vt(row[source_column], row['x'], row['y'], row['z'], extent), axis=1)
 
-#gdf["wkt"]
-def add_wkt(gdf, input):
+
+def add_wkt(gdf, source_column, osm_filter):
     return gdf.apply (lambda row: \
-        geojson_to_wkt(row[input]), axis=1)
-    #row['geojson_vt']
+        geojson_to_wkt(row[source_column], osm_filter), axis=1)
 
 
 def line_coords(line):
@@ -84,16 +81,16 @@ def line_coords(line):
 
 
 def simplify_geo(geo, factor):
-    if type(geo) == float or geo is None:
+    if isinstance(geo, float) or geo is None:
         return None
     new_geo = copy.deepcopy(geo)
     for feature in new_geo['features']:
         wkt = shapely.from_geojson(geojson.dumps(feature['geometry']))
         simple_wkt = wkt.simplify(wkt.length*factor, preserve_topology=False)
-        if type(simple_wkt) == shapely.geometry.multilinestring.MultiLineString:
+        if isinstance(simple_wkt,shapely.geometry.multilinestring.MultiLineString):
             coords = [line_coords(line) for line in simple_wkt.geoms]
             #coords = [line for line in simple_wkt.geoms]
-        elif type(simple_wkt) == shapely.geometry.polygon.Polygon:
+        elif isinstance(simple_wkt,shapely.geometry.polygon.Polygon):
             coords = [line_coords(simple_wkt.exterior)]
             #coords = simple_wkt.exterior
         else:
@@ -102,21 +99,22 @@ def simplify_geo(geo, factor):
         feature['geometry']['coordinates'] = coords
     return new_geo
 
-def simplified_geo(gdf, factor, input):
+def simplified_geo(gdf, factor, source_column):
     return gdf.apply (lambda row: \
-        simplify_geo(row[input], factor), axis=1)
+        simplify_geo(row[source_column], factor), axis=1)
 
 
-def add_more_formats(gdf, city_name, results_dir):
+def add_more_formats(gdf, city_name, result_path, osm_filter,
+                     source_column = "geojson"):
     print(f"Adding more data formats for {city_name}")
-    city_dir = path.join(results_dir, city_name)
     print("Adding formats")
-    gdf['simple'] = simplified_geo(gdf, 0.02, 'geojson')
-    gdf['geojson_vt'] = add_geojson_vt(gdf, 'geojson')
+    gdf['simple'] = simplified_geo(gdf, 0.02, source_column)
+    gdf['geojson_vt'] = add_geojson_vt(gdf, source_column)
     gdf['simple_vt'] = add_geojson_vt(gdf, 'simple')
-    gdf['wkt'] = add_wkt(gdf, 'geojson_vt')
-    gdf['simple_wkt'] = add_wkt(gdf, 'simple_vt')
-    print("Saving results")
-    with open(path.join(city_dir, "multiformat_gdf.geojson"), "w") as multiformat_gdf:
-        multiformat_gdf.write(gdf.to_json())
+    gdf['wkt'] = add_wkt(gdf, 'geojson_vt', osm_filter)
+    gdf['simple_wkt'] = add_wkt(gdf, 'simple_vt', osm_filter)
+    if result_path is not None:
+        print("Saving results")
+        with open(result_path, "w") as multiformat_gdf:
+            multiformat_gdf.write(gdf.to_json())
     return gdf
