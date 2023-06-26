@@ -4,6 +4,7 @@
 cache/
 data/
 old/
+figures/
 
 __pycache__
 checkpoints/
